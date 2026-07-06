@@ -1,0 +1,12 @@
+{
+  "editor.defaultFormatter": "ms-python.autopep8",
+  "notebook.defaultFormatter": "ms-python.autopep8",
+  "editor.formatOnSave": true,
+  "autopep8.args": [
+    "--max-line-length",
+    "150"
+  ],
+  "python.languageServer": "Pylance",
+  "python-envs.defaultEnvManager": "ms-python.python:poetry",
+  "python-envs.defaultPackageManager": "ms-python.python:poetry",
+}
