@@ -1,8 +1,12 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-app = FastAPI()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Perform any startup tasks here
+    app.state.qdrant = "AsyncQdrantClient(path = 'db')"
+    yield
+    # Perform any shutdown tasks here
 
-@app.get("/")
-def read_root():
-    return {"status": "ok"}
+app = FastAPI(lifespan=lifespan)

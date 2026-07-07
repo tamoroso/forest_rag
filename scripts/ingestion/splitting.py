@@ -3,35 +3,10 @@ import os
 import pymupdf4llm
 import sys
 import re
-import chromadb
-import time
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-import tiktoken
 import argparse
-import config
-
-
-# TODO: Add to utils.py
-
-
-def count_tokens(text):
-    # Use tiktoken to estimate embbeding costs
-    enc = tiktoken.encoding_for_model("text-embedding-3-small")
-    return len(enc.encode(text))
-
-
-def add_to_collection(file_path, collection, chunk_to_send):
-    try:
-        print(f"Adding {len(chunk_to_send)} chunks to the collection...")
-        collection.add(
-            ids=[
-                f"{file_path.split('/')[-1]}_{j}" for j in range(len(chunk_to_send))],
-            documents=[s.page_content for s in chunk_to_send],
-            metadatas=[s.metadata for s in chunk_to_send]
-        )
-    except Exception as e:
-        print(f"Error occurred while adding to collection: {e}")
+from qdrant_client import QdrantClient, models
+import uuid
 
 
 def parse_and_split(file_path, output_file_path, split_only=False, pages=None):
@@ -77,55 +52,6 @@ def parse_and_split(file_path, output_file_path, split_only=False, pages=None):
     return text_splitter.split_documents(md_header_splits)
 
 
-def count_tokens_in_splits(splits):
-    tokens = []
-    num_tokens = 0
-
-    for split in splits:
-        # Estimate the number of tokens in the content
-        split_tokens = count_tokens(split.page_content)
-        num_tokens += split_tokens
-        tokens.append(split_tokens)
-
-    print(f'Total number of tokens: {num_tokens}')
-
-    return tokens
-
-
-def send_chunks_to_collection(file_path, collection, splits):
-    # Send the chunks to the collection
-    print(f"Sending {len(splits)} chunks to the collection...")
-    chunk_size_limit = 40000
-    chunk_token_count = 0
-    chunk_to_send = []
-    window_start = time.time()
-    tokens = count_tokens_in_splits(splits)
-
-    for i, split in enumerate(splits):
-        print(f"Processing chunk {i+1}/{len(splits)}")
-        if tokens[i] + chunk_token_count < chunk_size_limit:
-            chunk_token_count += tokens[i]
-            print(f"Adding chunk {i+1} to the current chunk. Current token count: {chunk_token_count}")
-            chunk_to_send.append(split)
-        else:
-            print(f"Chunk {i+1} exceeds the token limit. Sending current chunk to collection. Current token count: {chunk_token_count}")
-            elapsed = time.time() - window_start
-            if elapsed < 60:
-                time.sleep(60 - elapsed)
-            window_start = time.time()
-            # Send the current chunk to the collection
-            print("Adding chunk to collection...")
-            add_to_collection(file_path, collection, chunk_to_send)
-            # Reset the chunk
-            chunk_token_count = 0
-            chunk_to_send = [split]
-    # Purge the last chunk if it's not empty
-    if len(chunk_to_send) > 0:
-        print(f"Sending final chunk to collection. Current token count: {chunk_token_count}")
-        print("Adding chunk to collection...")
-        add_to_collection(file_path, collection, chunk_to_send)
-
-
 def main():
     output_path = "data/processed"
 
@@ -137,11 +63,12 @@ def main():
     args = parser.parse_args()
 
     file_path = args.file_path
+    file_name = file_path.split("/")[-1]
     split_only = args.split
     pages = args.pages
     print(f"Processing file: {file_path} with split_only={split_only} and pages={pages if pages is not None else 'all'}")
     output_file_path = output_path + "/" + \
-        file_path.split("/")[-1].replace(".pdf", ".md")
+        file_name.replace(".pdf", ".md")
 
     if (split_only and not os.path.exists(output_file_path)):
         raise FileNotFoundError(
@@ -149,16 +76,33 @@ def main():
 
     splits = parse_and_split(file_path, output_file_path, split_only=split_only, pages=pages)
 
-    chromadb_client = chromadb.PersistentClient("db")
+    qdrant_client = QdrantClient(path="db")
 
-    collection = chromadb_client.get_or_create_collection(
-        name="forest_rag",
-        embedding_function=OpenAIEmbeddingFunction(
-            api_key=config.OPENAI_API_KEY,
-            model_name="text-embedding-3-small"
-        ))
+    model_name = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"  # Good compromise memory accuracy
+    collection_name = "shift_project_agriculture"
 
-    send_chunks_to_collection(file_path, collection, splits)
+    if not qdrant_client.collection_exists(collection_name):
+        qdrant_client.create_collection(
+            collection_name,
+            vectors_config=models.VectorParams(
+                size=qdrant_client.get_embedding_size(model_name),
+                distance=models.Distance.COSINE
+            )
+        )
+        print("Collection créée avec succès.")
+    else:
+        print("La collection existe déjà.")
+
+    metadata_with_docs = [
+        {"document": split.page_content, "source": file_name, "section_title": split.metadata} for split in splits
+    ]
+
+    qdrant_client.upload_collection(
+        collection_name,
+        vectors=[models.Document(text=split.page_content, model=model_name) for split in splits],
+        payload=metadata_with_docs,
+        ids=[uuid.uuid4() for _ in range(len(splits))]
+    )
 
     print(f"Done processing {file_path}. Total chunks sent: {len(splits)}")
 
