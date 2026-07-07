@@ -1,15 +1,13 @@
-import chromadb
+from qdrant_client import QdrantClient, models
 
-client = chromadb.PersistentClient(path="./db")
-collection = client.get_collection("forest_rag")
+qdrant_client = QdrantClient(path="db")
 
-results = collection.query(
-    query_texts=["Comment a évolué la proportion d'élèves issus du milieu agricole dans l'enseignement agricole entre les années 1990 et 2022 ?"],
-    n_results=5,
-    include=["documents", "metadatas", "distances"]
-)
+results = qdrant_client.query_points(
+    collection_name="shift_project_agriculture",
+    query=models.Document(
+        text="Comment a évolué la proportion d'élèves issus du milieu agricole dans l'enseignement agricole entre les années 1990 et 2022 ?",
+        model="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+    )
+).points
 
-for doc, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0]):
-    print(f"distance={dist:.3f} | metadata={meta}")
-    print(doc[:200])
-    print("---")
+print(results)
