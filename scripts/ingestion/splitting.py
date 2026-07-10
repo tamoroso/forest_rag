@@ -7,6 +7,7 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 import argparse
 from qdrant_client import QdrantClient, models
 import uuid
+from app import dense_embedding_model_name, collection_name
 
 
 def parse_and_split(file_path, output_file_path, split_only=False, pages=None):
@@ -78,14 +79,11 @@ def main():
 
     qdrant_client = QdrantClient(path="db")
 
-    model_name = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"  # Good compromise memory accuracy
-    collection_name = "shift_project_agriculture"
-
     if not qdrant_client.collection_exists(collection_name):
         qdrant_client.create_collection(
             collection_name,
             vectors_config=models.VectorParams(
-                size=qdrant_client.get_embedding_size(model_name),
+                size=qdrant_client.get_embedding_size(dense_embedding_model_name),
                 distance=models.Distance.COSINE
             )
         )
@@ -99,7 +97,7 @@ def main():
 
     qdrant_client.upload_collection(
         collection_name,
-        vectors=[models.Document(text=split.page_content, model=model_name) for split in splits],
+        vectors=[models.Document(text=split.page_content, model=dense_embedding_model_name) for split in splits],
         payload=metadata_with_docs,
         ids=[uuid.uuid4() for _ in range(len(splits))]
     )

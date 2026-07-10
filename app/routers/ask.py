@@ -1,4 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status, Depends
+from schemas import AskRequest, AskResponse
+from app import get_qdrant_client
+from services import generate_rag_response
 
 router = APIRouter(
     prefix="/ask",
@@ -7,10 +10,6 @@ router = APIRouter(
 )
 
 
-@router.post("/")
-async def ask_question(question: str):
-    """
-    Endpoint to ask a question to the AI model and receive an answer.
-    """
-    # Placeholder implementation - replace with actual AI model integration
-    return {"question": question, "answer": "This is a placeholder answer."}
+@router.post("", response_model=AskResponse, status_code=status.HTTP_200_OK)
+async def ask_question(payload: AskRequest, qdrant_client=Depends(get_qdrant_client)):
+    return await generate_rag_response(payload.question)
