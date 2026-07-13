@@ -7,11 +7,10 @@ reranker = TextCrossEncoder(model_name="jinaai/jina-reranker-v2-base-multilingua
 
 
 async def generate_rag_response(question: str, qdrant_client, groq_client):
-    query_embedded = list(dense_embedding_model_name.query_embed(question))
+    query_embedded = list(dense_embedding_model_name.query_embed(question))[0]
 
     initial_retrieval = await qdrant_client.query_points(
         collection_name,
-        using="embedding",
         query=query_embedded,
         with_payload=True,
         limit=10
@@ -25,7 +24,7 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
 
     # Reranking
     new_scores = list(
-        reranker.rerank(question, hits)
+        reranker.rerank(question, [hit["document"] for hit in hits])
     )
 
     ranking = [
@@ -50,7 +49,7 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
 
     # Question : {question}"""
 
-    llm_response = await groq_client.chant.completions.create(
+    llm_response = await groq_client.chat.completions.create(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
