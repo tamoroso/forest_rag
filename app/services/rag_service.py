@@ -42,10 +42,18 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
     - Si l'information n'est pas présente dans le contexte, réponds explicitement "Information non trouvée dans les documents fournis."
     - Cite systématiquement la source pour chaque affirmation.
     - Ne mobilise aucune connaissance externe au contexte fourni.
-    - Si le rapport distingue plusieurs scénarios, précise toujours à quel scénario un chiffre appartient."""
+    - Si le rapport distingue plusieurs scénarios, précise toujours à quel scénario un chiffre appartient.
+    
+    Exemple de réponse : 
+    " Il faut décarboner l'agriculture pour limiter le réchauffement climatique [1].
+    
+    Sources : [1] - Rapport sur l'agriculture
+    "
+
+    """
 
     user_prompt = f"""Contexte :
-    {[f"""<document index={rank[0]} source={hits[rank[0]]["source"]}>{hits[rank[0]]["document"]}</document>""" for rank in ranking[:4]]}
+    {[f"""<document source={hits[rank[0]]["source"]}>{hits[rank[0]]["document"]}</document>""" for rank in ranking[:4]]}
 
     # Question : {question}"""
 
@@ -55,9 +63,9 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
             {"role": "user", "content": user_prompt}
         ],
         model="llama-3.3-70b-versatile",
-        temperature=0.1
+        temperature=0.2
     )
 
     print(llm_response.choices)
 
-    return llm_response.choices[0].message.content
+    return {"answer": llm_response.choices[0].message.content, "sources": [{"content": hits[rank[0]]["document"], "source": hits[rank[0]]["source"]} for rank in enumerate(ranking)]}

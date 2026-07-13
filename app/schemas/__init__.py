@@ -1,3 +1,3 @@
-from .rag import AskRequest, AskResponse
+from .rag import QueryRequest, QueryResponse
 
-__all__ = ["AskRequest", "AskResponse"]
+__all__ = ["QueryRequest", "QueryResponse"]
