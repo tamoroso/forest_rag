@@ -1,0 +1,26 @@
+# .github/workflows/deploy-hf.yml
+name: Deploy to HF Spaces
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HF_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H hf.co >> ~/.ssh/known_hosts
+
+      - name: Push to Hugging Face Space
+        run: |
+          git remote add space git@hf.co:spaces/Amomas/forest-rag || true
+          git push space main --force
