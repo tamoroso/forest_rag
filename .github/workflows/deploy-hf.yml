@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup SSH
         env:
           HF_SSH_KEY: ${{ secrets.HF_SSH_KEY }}
@@ -18,11 +19,16 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$HF_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          
       - name: Verify key integrity
         run: ssh-keygen -lf ~/.ssh/id_ed25519 2>&1 || echo "CLÉ INVALIDE"
-      - name: ssh-keyscan
-        run: ssh-keyscan -p 22 -H hf.co >> ~/.ssh/known_hosts
-      - name: Push
+
+      - name: Debug SSH auth
+        run: ssh -T git@hf.co -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -v
+        
+      - name: Push to Hugging Face Space
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes
         run: |
           git remote add space git@hf.co:spaces/Amomas/forest-rag || true
           git push space main --force
