@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from app import GROQ_API_KEY
 from qdrant_client import AsyncQdrantClient
 from groq import AsyncGroq
+from app.routers import ask_router
 
 
 @asynccontextmanager
@@ -16,3 +17,5 @@ async def lifespan(app: FastAPI):
     await app.state.groq_client.close()
 
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(ask_router)

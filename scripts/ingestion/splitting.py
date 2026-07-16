@@ -1,9 +1,9 @@
-# Usage: poetry run python src/ingestion/splitting.py [file_path]
+# Usage: poetry run python -m scripts.ingestion.splitting --file_path [path_to_file]
 import os
 import pymupdf4llm
 import sys
 import re
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 import argparse
 from qdrant_client import QdrantClient, models
 import uuid
@@ -40,17 +40,9 @@ def parse_and_split(file_path, output_file_path, split_only=False, pages=None):
     markdown_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=headers_to_split_on, strip_headers=False
     )
-    md_header_splits = markdown_splitter.split_text(md)
-
-    # Char-level splits
-    chunk_size = 250
-    chunk_overlap = 30
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size, chunk_overlap=chunk_overlap
-    )
 
     # Split are tuples of (metadata, page_content)
-    return text_splitter.split_documents(md_header_splits)
+    return markdown_splitter.split_text(md)
 
 
 def main():

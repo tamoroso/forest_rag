@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Depends
-from schemas import QueryRequest, QueryResponse
+from app.schemas import QueryRequest, QueryResponse
 from app import get_qdrant_client, get_groq_client
-from services import generate_rag_response
+from app.services import generate_rag_response
 
 router = APIRouter(
     prefix="/ask",

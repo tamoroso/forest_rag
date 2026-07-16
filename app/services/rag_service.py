@@ -2,18 +2,18 @@ from fastembed import TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 from app import dense_embedding_model_name, collection_name
 
-dense_embedding_model_name = TextEmbedding(model_name=dense_embedding_model_name)
-reranker = TextCrossEncoder(model_name="jinaai/jina-reranker-v2-base-multilingual")
+dense_embedding_model = TextEmbedding(model_name=dense_embedding_model_name)
+reranker = TextCrossEncoder(model_name="jinaai/jina-reranker-v2-base-multilingual", threads=1)
 
 
 async def generate_rag_response(question: str, qdrant_client, groq_client):
-    query_embedded = list(dense_embedding_model_name.query_embed(question))[0]
+    query_embedded = list(dense_embedding_model.query_embed(question))[0]
 
     initial_retrieval = await qdrant_client.query_points(
         collection_name,
         query=query_embedded,
         with_payload=True,
-        limit=10
+        limit=5
     )
 
     hits = []
@@ -52,8 +52,12 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
 
     """
 
+    context_block = "\n".join(
+        f'<document source={hits[i]["source"]}>{hits[i]["document"]}</document>' for i, _ in ranking
+    )
+
     user_prompt = f"""Contexte :
-    {[f"""<document source={hits[rank[0]]["source"]}>{hits[rank[0]]["document"]}</document>""" for rank in ranking[:4]]}
+    {context_block}
 
     # Question : {question}"""
 
@@ -68,4 +72,4 @@ async def generate_rag_response(question: str, qdrant_client, groq_client):
 
     print(llm_response.choices)
 
-    return {"answer": llm_response.choices[0].message.content, "sources": [{"content": hits[rank[0]]["document"], "source": hits[rank[0]]["source"]} for rank in enumerate(ranking)]}
+    return {"answer": llm_response.choices[0].message.content, "sources": [{"content": hits[i]["document"], "source": hits[i]["source"]} for i, _ in ranking]}
