@@ -12,7 +12,6 @@ dependencies = [
     "uvicorn (>=0.49.0,<0.50.0)",
     "langchain (>=1.3.11,<2.0.0)",
     "langchain-openai (>=1.3.3,<2.0.0)",
-    "chromadb (>=1.5.9,<2.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
     "langfuse (>=4.12.0,<5.0.0)",
     "pymupdf (>=1.28.0,<2.0.0)",
@@ -20,10 +19,26 @@ dependencies = [
     "markdown-analysis (>=0.1.5,<0.2.0)",
     "langchain-text-splitters (>=1.1.2,<2.0.0)",
     "tiktoken (>=0.13.0,<0.14.0)",
-    "openai (>=2.44.0,<3.0.0)"
+    "openai (>=2.44.0,<3.0.0)",
+    "qdrant-client[fastembed] (>=1.14.2)",
+    "fastembed (>=0.8.0,<0.9.0)",
+    "groq (>=1.5.0,<2.0.0)",
+    "pytest (>=9.1.1,<10.0.0)",
+    "pydantic (>=2.13.4,<3.0.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan (>=2.1.0,<3.0.0)",
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-asyncio (>=1.4.0,<2.0.0)"
+]
+
+
+[tool.pytest.ini_options]
+pythonpath=["."]
