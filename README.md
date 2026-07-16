@@ -1,3 +1,12 @@
+---
+title: Forest RAG
+emoji: 🌳
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # forest-rag
 
 A production-oriented RAG (Retrieval-Augmented Generation) pipeline that answers questions on the agriculture volume of [The Shift Project](https://theshiftproject.org/) reports.
