@@ -222,3 +222,4 @@ chroma_db/
 *.pdf
 data/
 db/
+snapshot/
